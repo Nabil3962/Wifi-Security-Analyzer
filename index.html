@@ -1,0 +1,460 @@
+# wifi-security-analyzer
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wi-Fi Security Analyzer</title>
+  <meta name="description" content="Analyze your Wi-Fi network security and get recommendations">
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #00a8ff;
+      --danger: #ff4b5c;
+      --warning: #ffa500;
+      --success: #28a745;
+      --bg-dark: rgba(0, 0, 0, 0.85);
+      --text-dark: #f0f0f0;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Share Tech Mono', monospace;
+      background: url('https://i.ibb.co/6ZyX6CM/hacker-bg.jpg') no-repeat center center fixed;
+      background-size: cover;
+      color: var(--text-dark);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: start;
+      padding: 20px;
+      background-blend-mode: overlay;
+      background-color: var(--bg-dark);
+      position: relative;
+      transition: background-color 0.3s ease;
+    }
+
+    body.dark-mode {
+      background-color: #121212;
+      color: #e0e0e0;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      width: 350px;
+      height: 350px;
+      background: url('https://i.ibb.co/1X7rH5N/anonymous-mask.png') no-repeat center center;
+      background-size: contain;
+      opacity: 0.05;
+      transform: translate(-50%, -50%);
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    h2 {
+      font-size: 2em;
+      margin-bottom: 20px;
+      color: var(--primary);
+      text-shadow: 0 0 10px #00a8ff;
+      z-index: 1;
+      text-align: center;
+    }
+
+    .button-group {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      z-index: 1;
+      margin-bottom: 15px;
+    }
+
+    button {
+      padding: 10px 15px;
+      font-size: 14px;
+      cursor: pointer;
+      background: var(--primary);
+      border: none;
+      color: #000;
+      border-radius: 5px;
+      transition: all 0.2s ease;
+      font-family: 'Share Tech Mono', monospace;
+    }
+
+    button:hover {
+      transform: scale(1.05);
+      opacity: 0.9;
+    }
+
+    .toggle-theme {
+      background: #444;
+      color: white;
+    }
+
+    .scan-results {
+      width: 90%;
+      max-width: 800px;
+      margin: 20px auto;
+      padding: 20px;
+      background-color: rgba(30, 30, 30, 0.8);
+      border-radius: 5px;
+      border: 1px solid #444;
+      z-index: 1;
+    }
+
+    body.dark-mode .scan-results {
+      background-color: rgba(45, 45, 45, 0.8);
+    }
+
+    .network-card {
+      background: rgba(20, 20, 20, 0.7);
+      border-left: 4px solid var(--primary);
+      padding: 15px;
+      margin-bottom: 15px;
+      border-radius: 0 5px 5px 0;
+      transition: all 0.3s ease;
+    }
+
+    .network-card:hover {
+      transform: translateX(5px);
+      box-shadow: 0 0 15px rgba(0, 168, 255, 0.3);
+    }
+
+    .security-badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 3px;
+      font-weight: bold;
+      margin-left: 10px;
+    }
+
+    .security-wep {
+      background-color: var(--danger);
+    }
+
+    .security-wpa {
+      background-color: var(--warning);
+      color: #000;
+    }
+
+    .security-wpa2 {
+      background-color: #ffcc00;
+      color: #000;
+    }
+
+    .security-wpa3 {
+      background-color: var(--success);
+    }
+
+    .security-none {
+      background-color: #ff4b5c;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.7; }
+      100% { opacity: 1; }
+    }
+
+    .signal-strength {
+      display: flex;
+      align-items: center;
+      margin: 5px 0;
+    }
+
+    .signal-bars {
+      display: flex;
+      gap: 2px;
+      margin-left: 10px;
+    }
+
+    .signal-bar {
+      width: 4px;
+      background: #555;
+      border-radius: 2px;
+    }
+
+    .signal-bar.active {
+      background: var(--primary);
+    }
+
+    .recommendations {
+      margin-top: 30px;
+      padding: 15px;
+      background: rgba(255, 75, 92, 0.1);
+      border-left: 4px solid var(--danger);
+      border-radius: 0 5px 5px 0;
+    }
+
+    .recommendations.good {
+      background: rgba(40, 167, 69, 0.1);
+      border-left: 4px solid var(--success);
+    }
+
+    .info-text {
+      font-size: 0.9em;
+      margin-top: 20px;
+      text-align: center;
+      max-width: 600px;
+      opacity: 0.8;
+    }
+
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(0, 168, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: var(--primary);
+      animation: spin 1s ease-in-out infinite;
+      margin-left: 10px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @media (max-width: 600px) {
+      .button-group {
+        flex-direction: column;
+      }
+      
+      .scan-results, .network-card {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h2>📡 Wi-Fi Security Analyzer</h2>
+
+  <div class="button-group">
+    <button onclick="scanNetworks()">Scan Nearby Networks</button>
+    <button onclick="checkCurrentNetwork()">Analyze Current Network</button>
+    <button onclick="showSecurityTips()">Security Tips</button>
+    <button class="toggle-theme" onclick="toggleDarkMode()">🌙 Toggle Dark Mode</button>
+  </div>
+
+  <div id="scanResults" class="scan-results" style="display: none;">
+    <h3>Detected Networks <span id="networkCount"></span></h3>
+    <div id="networksList"></div>
+    
+    <div id="recommendations" class="recommendations">
+      <h3>Security Recommendations</h3>
+      <div id="recommendationsContent"></div>
+    </div>
+  </div>
+
+  <div id="securityTips" class="scan-results" style="display: none;">
+    <h3>Wi-Fi Security Best Practices</h3>
+    <ul>
+      <li>Use WPA3 encryption if available (or WPA2 as minimum)</li>
+      <li>Change default router admin credentials</li>
+      <li>Disable WPS (Wi-Fi Protected Setup)</li>
+      <li>Use a strong, unique password (12+ characters with mix of types)</li>
+      <li>Hide SSID if you don't need network discoverability</li>
+      <li>Enable MAC address filtering for additional security</li>
+      <li>Keep router firmware updated</li>
+      <li>Disable remote administration</li>
+    </ul>
+    <button onclick="hideSecurityTips()">Back to Scanner</button>
+  </div>
+
+  <p class="info-text">
+    <strong>Note:</strong> This is a simulation for educational purposes. Real Wi-Fi scanning requires appropriate permissions.
+  </p>
+
+  <script>
+    // Sample network data for demonstration
+    const sampleNetworks = [
+      { ssid: "HomeNetwork", security: "WPA3", signal: 90, channel: 6 },
+      { ssid: "GuestWiFi", security: "WPA2", signal: 75, channel: 11 },
+      { ssid: "CoffeeShop", security: "WPA", signal: 60, channel: 1 },
+      { ssid: "FreePublicWiFi", security: "None", signal: 45, channel: 3 },
+      { ssid: "Linksys", security: "WEP", signal: 30, channel: 6 },
+      { ssid: "HiddenNetwork", security: "WPA2", signal: 50, channel: 9 }
+    ];
+
+    // DOM elements
+    const scanResults = document.getElementById("scanResults");
+    const networksList = document.getElementById("networksList");
+    const networkCount = document.getElementById("networkCount");
+    const recommendations = document.getElementById("recommendations");
+    const recommendationsContent = document.getElementById("recommendationsContent");
+    const securityTips = document.getElementById("securityTips");
+
+    // Scan nearby networks
+    function scanNetworks() {
+      scanResults.style.display = "block";
+      securityTips.style.display = "none";
+      networksList.innerHTML = "<p>Scanning... <span class='loading'></span></p>";
+      
+      // Simulate scanning delay
+      setTimeout(() => {
+        displayNetworks(sampleNetworks);
+      }, 2000);
+    }
+
+    // Display networks
+    function displayNetworks(networks) {
+      networksList.innerHTML = "";
+      networkCount.textContent = `(${networks.length} found)`;
+      
+      networks.forEach(network => {
+        const networkCard = document.createElement("div");
+        networkCard.className = "network-card";
+        
+        // Security badge class
+        let badgeClass = "";
+        if (network.security === "WPA3") badgeClass = "security-wpa3";
+        else if (network.security === "WPA2") badgeClass = "security-wpa2";
+        else if (network.security === "WPA") badgeClass = "security-wpa";
+        else if (network.security === "WEP") badgeClass = "security-wep";
+        else badgeClass = "security-none";
+        
+        // Signal strength bars
+        const signalBars = Math.ceil(network.signal / 20);
+        let barsHTML = "";
+        for (let i = 0; i < 5; i++) {
+          barsHTML += `<div class="signal-bar ${i < signalBars ? 'active' : ''}"></div>`;
+        }
+        
+        networkCard.innerHTML = `
+          <h4>
+            ${network.ssid}
+            <span class="security-badge ${badgeClass}">${network.security || "Open"}</span>
+          </h4>
+          <div class="signal-strength">
+            Signal: ${network.signal}%
+            <div class="signal-bars">${barsHTML}</div>
+          </div>
+          <p>Channel: ${network.channel}</p>
+          ${network.security === "None" ? '<p class="warning">⚠️ This network is completely open!</p>' : ''}
+          ${network.security === "WEP" ? '<p class="warning">⚠️ WEP can be cracked in minutes!</p>' : ''}
+        `;
+        
+        networksList.appendChild(networkCard);
+      });
+      
+      generateRecommendations(networks);
+    }
+
+    // Generate security recommendations
+    function generateRecommendations(networks) {
+      let hasInsecure = networks.some(n => n.security === "None" || n.security === "WEP");
+      let hasWPA = networks.some(n => n.security === "WPA");
+      let hasWPA3 = networks.some(n => n.security === "WPA3");
+      
+      recommendations.className = hasInsecure ? "recommendations" : "recommendations good";
+      
+      let html = "";
+      
+      if (hasInsecure) {
+        html += `
+          <p>⚠️ <strong>Critical Issues Found:</strong></p>
+          <ul>
+            ${networks.some(n => n.security === "None") ? '<li>Open networks detected (no encryption)</li>' : ''}
+            ${networks.some(n => n.security === "WEP") ? '<li>WEP-encrypted networks detected (easily crackable)</li>' : ''}
+          </ul>
+          <p>These networks are vulnerable to eavesdropping and attacks.</p>
+        `;
+      } else {
+        html += `<p>✅ No critically vulnerable networks detected.</p>`;
+      }
+      
+      if (hasWPA && !hasWPA3) {
+        html += `
+          <p>🔍 <strong>Improvement Opportunities:</strong></p>
+          <ul>
+            <li>Some networks are using older WPA/WPA2 security</li>
+            <li>Consider upgrading to WPA3 where possible</li>
+          </ul>
+        `;
+      }
+      
+      html += `
+        <p>🔒 <strong>General Recommendations:</strong></p>
+        <ul>
+          <li>Always use WPA3 or at least WPA2 encryption</li>
+          <li>Avoid open networks for sensitive activities</li>
+          <li>Never use WEP encryption</li>
+          <li>Use strong, unique passwords (12+ characters)</li>
+        </ul>
+      `;
+      
+      recommendationsContent.innerHTML = html;
+    }
+
+    // Check current network (simulated)
+    function checkCurrentNetwork() {
+      scanResults.style.display = "block";
+      securityTips.style.display = "none";
+      networksList.innerHTML = "<p>Analyzing current connection... <span class='loading'></span></p>";
+      
+      // Simulate analysis delay
+      setTimeout(() => {
+        const currentNetwork = {
+          ssid: "MyHomeNetwork",
+          security: "WPA2",
+          signal: 85,
+          channel: 6
+        };
+        
+        displayNetworks([currentNetwork]);
+        
+        recommendationsContent.innerHTML = `
+          <p>${currentNetwork.security === "WPA3" ? 
+            '✅ Excellent! Your network uses WPA3 security.' : 
+            currentNetwork.security === "WPA2" ? 
+            '⚠️ Good but could be better. Consider upgrading to WPA3 if your router supports it.' : 
+            '❌ Your network security needs immediate attention!'}
+          </p>
+          <p>🔒 <strong>Recommendations:</strong></p>
+          <ul>
+            <li>${currentNetwork.security === "WPA3" ? 
+              'Keep your router firmware updated' : 
+              'Upgrade to WPA3 security if possible'}</li>
+            <li>Ensure your password is strong (12+ characters, mixed types)</li>
+            <li>Change default router admin credentials</li>
+            <li>Disable WPS (Wi-Fi Protected Setup)</li>
+          </ul>
+        `;
+        
+        recommendations.className = currentNetwork.security === "WPA3" ? 
+          "recommendations good" : "recommendations";
+      }, 1500);
+    }
+
+    // Show security tips
+    function showSecurityTips() {
+      scanResults.style.display = "none";
+      securityTips.style.display = "block";
+    }
+
+    // Hide security tips
+    function hideSecurityTips() {
+      scanResults.style.display = "block";
+      securityTips.style.display = "none";
+    }
+
+    // Toggle dark mode
+    function toggleDarkMode() {
+      document.body.classList.toggle("dark-mode");
+      localStorage.setItem("darkMode", document.body.classList.contains("dark-mode"));
+    }
+
+    // Initialize dark mode from localStorage
+    if (localStorage.getItem("darkMode") === "true") {
+      document.body.classList.add("dark-mode");
+    }
+
+    // Initial scan on page load (optional)
+    // scanNetworks();
+  </script>
+</body>
+</html>
